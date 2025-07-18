@@ -1,0 +1,286 @@
+{% extends "base.html" %}
+{% load static %}
+{% block seccion_activa %}inicio{% endblock %}
+{% block extra_css %}
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+{{ block.super }}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<style>
+  html, body {
+    height: 100%;
+    margin: 0;
+  }
+
+  .contenedor {
+    display: flex;
+    flex: 1;
+    height: 100vh;
+    overflow: hidden;
+  }
+
+  .contenido {
+    flex: 1;
+    display: flex;
+    overflow: hidden;
+  }
+
+  .formulario {
+    width: 400px;
+    padding: 20px;
+    background: #fff;
+    border-right: 1px solid #ccc;
+    overflow-y: auto;
+    height: 100%;
+    display: block;
+  }
+
+  .formulario h3 {
+    color: rgb(238, 7, 7);
+    margin-bottom: 10px;
+  }
+
+  .formulario label {
+    font-weight: bold;
+    display: block;
+    margin-top: 10px;
+  }
+
+  .formulario input,
+  .formulario select {
+    width: 100%;
+    padding: 8px;
+    background: #e2e0ec;
+    border: none;
+    border-radius: 25px;
+    margin-top: 4px;
+  }
+
+  .formulario button {
+    margin-top: 20px;
+    background-color: #d20000;
+    color: white;
+    border: none;
+    padding: 10px 30px;
+    font-weight: bold;
+    border-radius: 4px;
+    cursor: pointer;
+    display: block;
+    width: 100%;
+  }
+
+  #map {
+    flex: 1;
+    height: 100%;
+    width: 100%;
+  }
+
+  .btn-accidente {
+    background-color: #ff2e2e;
+    color: rgb(255, 255, 255);
+    border: none;
+    padding: 10px 25px;
+    border-radius: 25px;
+    margin-right: 10px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+  }
+
+  .btn-accidente.selected {
+    background-color: #560101;
+  }
+
+</style>
+{% endblock %}
+
+{% block contenido %}
+<div class="contenedor">
+  <div class="contenido" id="zonaContenido">
+    <div id="formulario" class="formulario">
+      <h3>CREAR BACHE</h3>
+
+      <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        <p>Por favor, ubique el bache en el mapa</p>
+        <label>Ubicación obtenida:</label>
+        <label>Latitud:</label>
+        <input type="text" id="latitud" name="latitud" readonly required>
+        <label>Longitud:</label>
+        <input type="text" id="longitud" name="longitud" readonly required>
+        <p>Por favor, rellene la siguiente información:</p>
+        
+        {{ form.peligrosidad }}
+        {{ form.estado }}
+
+        <label>Tipo de calle</label>
+        {{ form.tipo_calle }}
+
+        <label>Dirección</label>
+        <input type="text" name="direccion" required>
+
+        <label>Diametro Aproximado(cm)</label>
+        {{ form.diametro }}
+
+        <div class="campo-formulario">
+          <label>Sufrió un accidente por este bache?</label>
+          <div>
+            <button type="button" class="btn-accidente" onclick="seleccionarAccidente(1)">Sí</button>
+            <button type="button" class="btn-accidente" onclick="seleccionarAccidente(0)">No</button>
+            <input type="hidden" name="accidentes" id="id_accidentes">
+          </div>
+        </div>
+
+        <label>Localidad</label>
+        <select name="localidad" id="id_localidad">
+          {% for loc in localidades %}
+            <option value="{{ loc.id }}">{{ loc.nombre }}</option>
+          {% endfor %}
+        </select>
+
+        <label>UPZ</label>
+        <select name="upz"  id="id_upz">
+            <option value="">Seleccione una UPZ</option>
+        </select>
+
+        <label>Barrio</label>
+        <select name="barrio"  id="id_barrio">
+            <option value="">Seleccione un barrio</option>
+        </select>
+
+        <label>Fotografía</label>
+        <input type="file" name="foto" accept="image/png, image/jpeg" required>
+
+        <button type="submit">Crear</button>
+      </form>
+    </div>
+
+    <div id="map"></div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{{ block.super }}
+<script>
+  function seleccionarAccidente(valor) {
+    document.getElementById('id_accidentes').value = valor;
+
+    const botones = document.querySelectorAll('.btn-accidente');
+    botones.forEach(btn => btn.classList.remove('selected'));
+
+    if (valor === 1) {
+      botones[0].classList.add('selected');
+    } else {
+      botones[1].classList.add('selected');
+    }
+  }
+</script>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+  let map;
+  let marcador;
+  let mapaIniciado = false;
+
+  document.addEventListener('DOMContentLoaded', function () {
+    map = L.map('map').setView([4.6097, -74.0817], 13);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap contributors'
+    }).addTo(map);
+
+    map.on('click', function (e) {
+      const lat = e.latlng.lat.toFixed(6);
+      const lng = e.latlng.lng.toFixed(6);
+      document.getElementById("latitud").value = lat;
+      document.getElementById("longitud").value = lng;
+
+      if (marcador) map.removeLayer(marcador);
+
+      marcador = L.marker([lat, lng], {
+        icon: L.icon({
+          iconUrl: "{% static 'bache/images/punto_rojo.png' %}",
+          iconSize: [32, 32],
+          iconAnchor: [16, 32],
+          popupAnchor: [0, -32]
+        })
+      }).addTo(map).bindPopup("Ubicación seleccionada").openPopup();
+    });
+
+    const localidadSelect = document.getElementById('id_localidad');
+    const upzSelect = document.getElementById('id_upz');
+    const barrioSelect = document.getElementById('id_barrio');
+
+    localidadSelect.addEventListener('change', function () {
+      const localidadId = this.value;
+
+      fetch(`/ajax/upzs/?localidad_id=${localidadId}`)
+        .then(response => response.json())
+        .then(data => {
+          upzSelect.innerHTML = '<option value="">Seleccione una UPZ</option>';
+          data.forEach(upz => {
+            const option = document.createElement('option');
+            option.value = upz.id;
+            option.textContent = upz.nombre;
+            upzSelect.appendChild(option);
+          });
+
+          barrioSelect.innerHTML = '<option value="">Seleccione un barrio</option>';
+        });
+    });
+
+    upzSelect.addEventListener('change', function () {
+      const upzId = this.value;
+
+      fetch(`/ajax/barrios/?upz_id=${upzId}`)
+        .then(response => response.json())
+        .then(data => {
+          barrioSelect.innerHTML = '<option value="">Seleccione un barrio</option>';
+          data.forEach(barrio => {
+            const option = document.createElement('option');
+            option.value = barrio.id;
+            option.textContent = barrio.nombre;
+            barrioSelect.appendChild(option);
+          });
+        });
+    });
+  });
+</script>
+{% if bache_creado %}
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    Swal.fire({
+      icon: 'success',
+      title: '¡Bache creado exitosamente!',
+      confirmButtonText: 'Aceptar',
+      confirmButtonColor: '#28a745'
+    }).then(() => {
+      window.location.href = "{% url 'inicio' %}";
+    });
+  });
+</script>
+{% endif %}
+{% if form.errors %}
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    Swal.fire({
+      icon: 'error',
+      title: '❌ Formulario inválido',
+      html: `
+        <ul style="text-align: left;">
+          {% for field in form %}
+            {% for error in field.errors %}
+              <li><strong>{{ field.label }}:</strong> {{ error }}</li>
+            {% endfor %}
+          {% endfor %}
+          {% for error in form.non_field_errors %}
+            <li>{{ error }}</li>
+          {% endfor %}
+        </ul>
+      `,
+      confirmButtonText: 'Aceptar',
+      confirmButtonColor: '#d20000'
+    });
+  });
+</script>
+{% endif %}
+{% endblock %}

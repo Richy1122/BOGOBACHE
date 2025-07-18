@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+{% load static %}
+<link rel="stylesheet" href="{% static 'css/tu_archivo.css' %}">
+<script src="{% static 'js/tu_archivo.js' %}"></script>
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+{% block extra_css %}
+{{ block.super }}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<style>
+  html, body {
+    height: 100%;
+    margin: 0;
+  }
+
+  .contenedor {
+    display: flex;
+    flex: 1;
+    height: 100vh;
+    overflow: hidden;
+  }
+
+  .menu-lateral {
+    width: 200px;
+    background: #fff;
+    border-right: 1px solid #ccc;
+    display: flex;
+    flex-direction: column;
+    transition: all 0.3s ease;
+  }
+
+  .menu-lateral button {
+    padding: 15px;
+    border: none;
+    background: none;
+    color: #d20000;
+    font-weight: bold;
+    cursor: pointer;
+    text-align: left;
+    border-bottom: 1px solid #eee;
+  }
+
+  .contenido {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    color: #888;
+  }
+
+  /* Estilo para el botón activo de INICIO */
+  .btn-inicio-activo {
+    background-color: #d20000 !important;
+    color: white !important;
+  }
+</style>
+{% endblock %}
+
+{% block contenido %}
+<div class="contenedor">
+  <div id="menuLateral" class="menu-lateral">
+    <a href="{% url 'ver_filtrado_baches' %}"><button>CONSULTAR BACHE</button></a>
+    <a href="{% url 'crear_bache' %}" onclick="ocultarMenuLateral()"><button>CREAR BACHE</button></a>
+    <a href="{% url 'modificar_bache' %}" onclick="ocultarMenuLateral()"><button>MODIFICAR BACHE</button></a>
+    <button onclick="alert('Funcionalidad ELIMINAR no implementada')">ELIMINAR BACHE</button>
+  </div>
+
+  <div class="contenido">
+    Selecciona una opción del menú lateral.
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{{ block.super }}
+<script>
+  function ocultarMenuLateral() {
+    const menu = document.getElementById('menuLateral');
+    if (menu) {
+      menu.style.transform = 'translateX(-200px)';
+    }
+  }
+</script>
+{% endblock %}

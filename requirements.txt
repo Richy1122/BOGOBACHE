@@ -3,3 +3,7 @@ djangorestfamework==3.13.1
 os
 pillow
 mysqlclient
+spectacular
+drf-yasg
+pip freeze | grep -v "gdal" 
+ pip install django-leaflet

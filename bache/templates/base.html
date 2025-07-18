@@ -1,0 +1,165 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}BOGOBACHE{% endblock %}</title>
+
+  <style>
+    html, body {
+      height: 100%;
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background-color: #eceff1;
+    }
+
+    body {
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+
+    .wrapper {
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+
+    .sticky-header {
+      position: sticky;
+      top: 0;
+      z-index: 999;
+      background-color: white;
+    }
+
+    header {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 60px; /* o la altura real de tu header */
+      z-index: 1001;
+    }
+
+    .header-image {
+      width: 100%;
+      height: auto;
+      display: block;
+    }
+
+    nav {
+      background-color: white;
+      display: flex;
+      align-items: stretch;
+      padding: 0;
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+      gap: 10px;
+      height: 50px;
+    }
+
+    nav a {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      padding: 0 30px;
+      text-decoration: none;
+      color: black;
+      font-weight: bold;
+      border-radius: 0;
+      transition: background-color 0.3s ease, color 0.3s ease;
+    }
+
+    nav a:hover {
+      background-color: #f2f2f2;
+      color: black;
+    }
+
+    nav a.active {
+      background-color: #d20000;
+      color: white;
+    }
+
+    .main-content {
+      flex: 1;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .content {
+      background-color: white;
+      max-width: 800px;
+      margin: 20px auto;
+      padding: 30px;
+      border-radius: 6px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+
+    .content h2 {
+      font-size: 18px;
+      margin-bottom: 15px;
+    }
+
+    .content p {
+      font-size: 15px;
+      text-align: justify;
+      line-height: 1.6;
+    }
+
+    .bottom-banner {
+      background: #b00000;
+      color: white;
+      text-align: center;
+      padding: 15px;
+      font-weight: bold;
+      margin-top: auto;
+    }
+
+    .logo-img-container {
+      text-align: center;
+      margin-bottom: 25px;
+    }
+
+    .logo-img-container img {
+      max-width: 300px;
+      border-radius: 10px;
+    }
+
+    #map {
+      height: 500px;
+      width: 100%;
+      margin: 20px 0;
+      border-radius: 6px;
+    }
+  </style>
+
+  {% block extra_css %}{% endblock %}
+</head>
+<body>
+  <div class="wrapper">
+    <div class="sticky-header">
+      <img class="header-image" src="{% static 'image.png' %}" alt="Encabezado BOGOBACHE">
+      <nav>
+        <a href="{% url 'inicio' %}" class="{% if request.resolver_match.url_name == 'inicio' %}active{% endif %}">Inicio</a>
+        <a href="{% url 'somos' %}" class="{% if request.resolver_match.url_name == 'somos' %}active{% endif %}">Quiénes somos</a>
+        <a href="{% url 'sesion' %}" class="{% if request.resolver_match.url_name == 'sesion' %}active{% endif %}">Inicio de sesión</a>
+      </nav>
+    </div>
+
+    <main class="main-content"> 
+      {% block contenido %}{% endblock %}
+    </main>
+
+    <div class="bottom-banner">
+       © 2025 Bogobache - Todos los derechos reservados
+    </div>
+  </div>
+
+  {% block extra_js %}{% endblock %}
+</body>
+</html>
+              

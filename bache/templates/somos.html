@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% load static %}
+{% block titulo %} {% endblock %}
+
+{% block contenido %}
+
+
+  <main>
+    <div class="content">
+<!-- Imagen sin borde azul -->
+    <div class="logo-img-container">
+          <img src="{% static 'centro.jpg' %}" alt="Logo BOGOBACHE">
+        </div>
+      <div class="logo-box">BOGOBACHE</div>
+
+      <h2>BOGOBACHE - NOS CUIDAMOS ENTRE TODOS</h2>
+
+      <p>
+        Somos una iniciativa ciudadana comprometida con la seguridad vial y la mejora de la infraestructura urbana en Bogotá. 
+        A través de la identificación y reporte de baches, buscamos crear conciencia y trabajar de la mano con las autoridades para 
+        lograr una ciudad más segura para todos.
+      </p>
+    </div>
+  </main>
+{% endblock %}

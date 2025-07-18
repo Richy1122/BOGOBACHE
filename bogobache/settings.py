@@ -27,19 +27,25 @@ DEBUG = True
 
 ALLOWED_HOSTS = []
 
+STATIC_URL = '/static/'
+STATIC_FILES_DIRS = [BASE_DIR / 'static']
 
 # Application definition
 
 INSTALLED_APPS = [
-    'django.contrib.admin',
+   'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'bache'
+    'bache',
+    'rest_framework',
+    'drf_spectacular',
 ]
-
+# Configuración para archivos multimedia
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / 'media'
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -55,7 +61,7 @@ ROOT_URLCONF = 'bogobache.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [BASE_DIR / 'bache' / 'templates'],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -80,7 +86,10 @@ DATABASES = {
         'USER':'root',
         'PASSWORD':'',
         'HOST':'localhost',
-        'PORT':'3306'
+        'PORT':'3306',
+        'OPTIONS': {
+            'init_command': "SET time_zone='+00:00'",  # MySQL en UTC
+        }
     }
 }
 
@@ -107,12 +116,9 @@ AUTH_PASSWORD_VALIDATORS = [
 # Internationalization
 # https://docs.djangoproject.com/en/5.2/topics/i18n/
 
-LANGUAGE_CODE = 'en-us'
+LANGUAGE_CODE = 'es-co'
 
-TIME_ZONE = 'UTC'
-
-USE_I18N = True
-
+TIME_ZONE = 'America/Bogota'  # Para Colombia
 USE_TZ = True
 
 
@@ -125,3 +131,52 @@ STATIC_URL = 'static/'
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+
+REST_FRAMEWORK = {
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+    'DEFAULT_PAGINATION_CLASS': None,
+    'DATETIME_FORMAT': '%Y-%m-%dT%H:%M:%S%z',  # Hora local con offset (ej: "2024-07-15T14:00:00-05:00")
+    'DATE_FORMAT': '%Y-%m-%d',  # Añadido para consistencia
+    'TIME_FORMAT': '%H:%M:%S',  # Añadido para consistencia
+    'DATE_INPUT_FORMATS': ['%Y-%m-%d', 'iso-8601'],
+    'DATETIME_INPUT_FORMATS': [
+        '%Y-%m-%dT%H:%M:%S%z',  # Hora local con offset (ej: -05:00)
+        '%Y-%m-%dT%H:%M:%S.%fZ',  # UTC (opcional, si aceptas Z)
+        'iso-8601',
+    ],
+    'TIME_INPUT_FORMATS': ['%H:%M:%S', '%H:%M:%S.%f', 'iso-8601'],
+    'USE_L10N': False,  # ¡Correcto! Evita conflictos con formatos locales
+    'COERCE_DECIMAL_TO_STRING': False,  # Perfecto para precisión decimal
+}
+
+SPECTACULAR_SETTINGS = {
+   'TITLE': 'API BACHE',
+    'DESCRIPTION': 'API PARA BACHES',  # Corregí "DESCRIPCION" -> "DESCRIPTION"
+    'VERSION': '1.0.0',
+    'SERVE_INCLUDE_SCHEMA': False,  # "SERVER_INCLUDE_SCHEMA" -> "SERVE_INCLUDE_SCHEMA"
+    'COMPONENT_SPLIT_REQUEST': True,
+    'SCHEMA_COERCE_PATH_PK': True,
+    'SCHEMA_PATH_PREFIX': r'/api/',
+    'SWAGGER_UI_SETTINGS': {
+        'deepLinking': True,
+        'persistAuthorization': True,
+    },
+    'FILE_UPLOAD_MAX_MEMORY_SIZE': 2_097_152,  # 2MB - Añade esta línea
+    'COMPONENT_NO_READ_ONLY_REQUIRED': True,
+    'ENUM_ADD_EXPLICIT_BLANK_NULL_CHOICE': False,
+    'SCHEMA_COERCE_METHOD_NAMES': {
+        'retrieve': 'read',
+        'destroy': 'delete'
+    },
+}
+
+LEAFLET_CONFIG = {
+   'DEFAULT_CENTER': (4.6097, -74.0817),  # Bogotá
+    'DEFAULT_ZOOM': 12,
+    'MIN_ZOOM': 3,
+    'MAX_ZOOM': 18,
+    'SCALE': 'metric',
+    'ATTRIBUTION_PREFIX': 'Powered by Leaflet',
+    'RESET_VIEW': False,
+}

@@ -1,0 +1,177 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block contenido %}
+<div class="main-container flex h-screen overflow-hidden">
+  <!-- Panel izquierdo: Formulario de modificación -->
+  <div class="w-1/3 bg-gray-100 p-4 overflow-y-auto">
+    <h2 class="text-xl font-bold mb-4">Modificar Bache</h2>
+
+    <div class="mb-3">
+      <label class="block font-bold">Buscar por ID del Bache</label>
+      <input type="text" id="buscar_id_bache" class="w-full p-2 rounded border" placeholder="Ej. BCH001">
+      <button onclick="buscarBache()" class="mt-2 px-4 py-2 bg-blue-500 text-white rounded">Buscar</button>
+    </div>
+
+    <form id="form-modificar-bache">
+      <input type="hidden" id="id_bache" name="id_bache">
+
+      <label class="block mt-3 font-bold">Localidad</label>
+      <select id="localidad" name="localidad" class="w-full p-2 rounded" style="background:#e2e0ec;"></select>
+
+      <label class="block mt-3 font-bold">UPZ</label>
+      <select id="upz" name="upz" class="w-full p-2 rounded" style="background:#e2e0ec;"></select>
+
+      <label class="block mt-3 font-bold">Barrio</label>
+      <select id="barrio" name="barrio" class="w-full p-2 rounded" style="background:#e2e0ec;"></select>
+
+      <label class="block mt-3 font-bold">Estado</label>
+      <select id="estado" name="estado" class="w-full p-2 rounded" style="background:#e2e0ec;">
+        <option value="En progreso">En progreso</option>
+        <option value="Reparado">Reparado</option>
+        <option value="Sin reparar">Sin reparar</option>
+      </select>
+
+      <label class="block mt-3 font-bold">Peligrosidad</label>
+      <select id="peligrosidad" name="peligrosidad" class="w-full p-2 rounded" style="background:#e2e0ec;">
+        <option value="Alta">Alta</option>
+        <option value="Media">Media</option>
+        <option value="Baja">Baja</option>
+      </select>
+
+      <label class="block mt-3 font-bold">Tipo de Calle</label>
+      <select id="tipo_calle" name="tipo_calle" class="w-full p-2 rounded" style="background:#e2e0ec;"></select>
+
+      <label class="block mt-3 font-bold">Dirección</label>
+      <input type="text" id="direccion" name="direccion" class="w-full p-2 rounded" style="background:#e2e0ec;">
+
+      <label class="block mt-3 font-bold">Accidentes</label>
+      <input type="number" id="accidentes" name="accidentes" class="w-full p-2 rounded" style="background:#e2e0ec;">
+
+      <label class="block mt-3 font-bold">Diámetro</label>
+      <input type="number" id="diametro" name="diametro" class="w-full p-2 rounded" style="background:#e2e0ec;" step="0.01">
+
+      <label class="block mt-3 font-bold">Latitud</label>
+      <input type="text" id="latitud" name="latitud" class="w-full p-2 rounded" style="background:#e2e0ec;" readonly>
+
+      <label class="block mt-3 font-bold">Longitud</label>
+      <input type="text" id="longitud" name="longitud" class="w-full p-2 rounded" style="background:#e2e0ec;" readonly>
+
+      <div class="mt-3">
+        <label class="block font-bold">Foto</label>
+        <img id="foto_preview" class="mt-2 w-full rounded shadow" src="" alt="Sin imagen">
+      </div>
+
+      <button type="submit" class="mt-4 bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">Guardar Cambios</button>
+    </form>
+  </div>
+
+  <!-- Mapa -->
+  <div id="map" class="w-2/3 h-full z-0"></div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+<script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+
+<script>
+let mapa = L.map('map').setView([4.6097, -74.0817], 12);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  attribution: '© OpenStreetMap'
+}).addTo(mapa);
+
+let marcador;
+
+// Función para buscar bache por ID
+function buscarBache() {
+  const id = document.getElementById("buscar_id_bache").value;
+  if (!id) return alert("Ingrese un ID de bache");
+
+  axios.get(`/api/get_bache/${id}/`)
+    .then(res => llenarFormulario(res.data))
+    .catch(err => alert("Bache no encontrado"));
+}
+
+// Llenar formulario con datos del bache
+function llenarFormulario(bache) {
+  document.getElementById("id_bache").value = bache.id_bache;
+  document.getElementById("localidad").value = bache.localidad;
+  document.getElementById("upz").value = bache.upz;
+  document.getElementById("barrio").value = bache.barrio;
+  document.getElementById("estado").value = bache.estado;
+  document.getElementById("peligrosidad").value = bache.peligrosidad;
+  document.getElementById("tipo_calle").value = bache.tipo_calle;
+  document.getElementById("direccion").value = bache.direccion;
+  document.getElementById("accidentes").value = bache.accidentes;
+  document.getElementById("diametro").value = bache.diametro;
+  document.getElementById("latitud").value = bache.latitud;
+  document.getElementById("longitud").value = bache.longitud;
+
+  if (bache.foto) {
+    document.getElementById("foto_preview").src = bache.foto;
+  } else {
+    document.getElementById("foto_preview").src = "";
+  }
+
+  if (marcador) mapa.removeLayer(marcador);
+  marcador = L.marker([bache.latitud, bache.longitud]).addTo(mapa).bindPopup("Bache seleccionado").openPopup();
+  mapa.setView([bache.latitud, bache.longitud], 15);
+}
+
+// Guardar cambios
+document.getElementById("form-modificar-bache").addEventListener("submit", function(e) {
+  e.preventDefault();
+  const id = document.getElementById("id_bache").value;
+  const formData = {
+    localidad: document.getElementById("localidad").value,
+    upz: document.getElementById("upz").value,
+    barrio: document.getElementById("barrio").value,
+    estado: document.getElementById("estado").value,
+    peligrosidad: document.getElementById("peligrosidad").value,
+    tipo_calle: document.getElementById("tipo_calle").value,
+    direccion: document.getElementById("direccion").value,
+    accidentes: document.getElementById("accidentes").value,
+    diametro: document.getElementById("diametro").value,
+    latitud: document.getElementById("latitud").value,
+    longitud: document.getElementById("longitud").value,
+  };
+
+  axios.post(`/modificar_bache/${id}/`, formData)
+    .then(() => alert("Bache actualizado correctamente"))
+    .catch(err => alert("Error al actualizar el bache"));
+});
+
+// Cargar opciones de Localidad, UPZ, Barrio, Tipo Calle
+window.onload = () => {
+  fetch('/api/localidades/').then(r => r.json()).then(data => {
+    const sel = document.getElementById("localidad");
+    data.forEach(l => sel.innerHTML += `<option value="${l.id}">${l.nombre}</option>`);
+  });
+
+  fetch('/api/tipo_calles/').then(r => r.json()).then(data => {
+    const sel = document.getElementById("tipo_calle");
+    data.forEach(t => sel.innerHTML += `<option value="${t.id}">${t.nombre}</option>`);
+  });
+
+  // Filtro anidado de UPZ y Barrio
+  document.getElementById("localidad").addEventListener("change", () => {
+    const id = document.getElementById("localidad").value;
+    fetch(`/api/upz_por_localidad/${id}/`)
+      .then(r => r.json()).then(data => {
+        let sel = document.getElementById("upz");
+        sel.innerHTML = "";
+        data.forEach(u => sel.innerHTML += `<option value="${u.id}">${u.nombre}</option>`);
+      });
+  });
+
+  document.getElementById("upz").addEventListener("change", () => {
+    const id = document.getElementById("upz").value;
+    fetch(`/api/barrios_por_upz/${id}/`)
+      .then(r => r.json()).then(data => {
+        let sel = document.getElementById("barrio");
+        sel.innerHTML = "";
+        data.forEach(b => sel.innerHTML += `<option value="${b.id}">${b.nombre}</option>`);
+      });
+  });
+};
+</script>
+{% endblock %}
