@@ -2,6 +2,7 @@ import logging
 from django.shortcuts import render, get_object_or_404
 from django.http import JsonResponse, HttpResponseRedirect
 from django.urls import reverse
+from django.http import JsonResponse, Http404
 
 from rest_framework import viewsets, status
 from rest_framework.parsers import MultiPartParser, FormParser
@@ -15,6 +16,7 @@ from .serializers import BacheSerializer, BacheUpdateSerializer, UPZSerializer, 
 from .forms import BacheForm
 from django.core.serializers import serialize
 import json
+from django.views.decorators.http import require_POST
 
 logger = logging.getLogger(__name__)
 
@@ -45,7 +47,7 @@ def barrios_por_upz(request, upz_id):
 
 # Página: mapa estático
 def mapa_baches(request):
-    baches = Bache.objects.all().values('id_bache', 'latitud', 'longitud', 'estado', 'peligrosidad')
+    baches = Bache.objects.filter(deleted_at__isnull=True).values('id_bache', 'latitud', 'longitud', 'estado', 'peligrosidad')
     return render(request, 'mapa.html', {
         'baches': list(baches),
         'google_maps_api_key': 'TU_API_KEY_DE_GOOGLE_MAPS'
@@ -88,7 +90,7 @@ def crear_bache(request):
 
 # Vista de consulta con filtros (renderiza el HTML con el mapa y filtros)
 def ver_filtrado_baches(request):
-    baches = Bache.objects.all()
+    baches = Bache.objects.filter(deleted_at__isnull=True)
 
     localidad = request.GET.get('localidad')
     upz = request.GET.get('upz')
@@ -165,7 +167,7 @@ def filtrar_baches(request):
     except json.JSONDecodeError:
         return JsonResponse({"error": "JSON inválido"}, status=400)
 
-    baches = Bache.objects.all()
+    baches = Bache.objects.filter(deleted_at__isnull=True)
 
     localidad = data.get('localidad')
     upz = data.get('upz')
@@ -227,8 +229,8 @@ def obtener_filtros(request):
     estados = list(Bache.objects.values_list('estado', flat=True).distinct())
     niveles_peligrosidad = list(Bache.objects.values_list('peligrosidad', flat=True).distinct())
 
-    max_accidentes = Bache.objects.all().order_by('-accidentes').first().accidentes if Bache.objects.exists() else 0
-    max_diametro = Bache.objects.all().order_by('-diametro').first().diametro if Bache.objects.exists() else 0
+    max_accidentes = Bache.objects.filter(deleted_at__isnull=True).order_by('-accidentes').first().accidentes if Bache.objects.exists() else 0
+    max_diametro = Bache.objects.filter(deleted_at__isnull=True).order_by('-diametro').first().diametro if Bache.objects.exists() else 0
 
     return JsonResponse({
         'localidades': localidades,
@@ -248,7 +250,7 @@ def sesion(request):
     return render(request, 'somos.html', { 'title': 'PAGINA' })
 
 class BacheViewSet(viewsets.ModelViewSet):
-    queryset = Bache.objects.all()
+    queryset = Bache.objects.filter(deleted_at__isnull=True)
     serializer_class = BacheSerializer
     parser_classes = [MultiPartParser, FormParser]
     pagination_class = None
@@ -282,40 +284,44 @@ class BacheViewSet(viewsets.ModelViewSet):
         logger.info(f"Bache creado con ID: {response.data.get('id_bache')}")
         return response
 
+@csrf_exempt
+@require_http_methods(["GET"])
+def mostrar_modificar_bache(request):
+    """
+    Vista que carga el HTML con el mapa y formulario de edición.
+    No requiere ID al inicio.
+    """
+    context = {
+        'localidades': Localidad.objects.all(),
+        'tipos_calle': list(Tipo_calle.choices),
+        'estados': list(Estado.choices),
+        'peligrosidades': list(Peligrosidad.choices),
+    }
+    return render(request, 'bache/modificar_bache.html', context)
 
-@api_view(['GET'])
+
+@csrf_exempt
+@require_http_methods(["GET"])
 def get_bache(request, id_bache):
+    """
+    API que retorna los datos del bache a modificar (por ID).
+    """
     try:
         bache = get_object_or_404(Bache, id_bache=id_bache)
         data = {
             "id_bache": bache.id_bache,
-            "localidad": bache.localidad.id if bache.localidad else None,
-            "upz": bache.upz.id if bache.upz else None,
-            "barrio": bache.barrio.id if bache.barrio else None,
-            "peligrosidad": bache.peligrosidad,
-            "estado": bache.estado,
-            "tipo_calle": bache.tipo_calle.id if bache.tipo_calle else None,
-            "direccion": bache.direccion,
-            "accidentes": bache.accidentes,
-            "diametro": float(bache.diametro),
-            "latitud": float(bache.latitud),
-            "longitud": float(bache.longitud),
-            "foto": bache.foto.url if bache.foto else None,
-        }
-        return Response(data, status=status.HTTP_200_OK)
-    except Exception as e:
-        return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-
-@api_view(['GET'])
-def get_bache(request, id_bache):
-    try:
-        bache = get_object_or_404(Bache, id_bache=id_bache)
-        data = {
-            "id_bache": bache.id_bache,
-            "localidad": bache.localidad.id if bache.localidad else None,
-            "upz": bache.upz.id if bache.upz else None,
-            "barrio": bache.barrio.id if bache.barrio else None,
+            "localidad": {
+                "id": bache.localidad.id,
+                "nombre": bache.localidad.nombre,
+            } if bache.localidad else None,
+            "upz": {
+                "id": bache.upz.id,
+                "nombre": bache.upz.nombre,
+            } if bache.upz else None,
+            "barrio": {
+                "id": bache.barrio.id,
+                "nombre": bache.barrio.nombre,
+            } if bache.barrio else None,
             "peligrosidad": bache.peligrosidad,
             "estado": bache.estado,
             "tipo_calle": bache.tipo_calle,
@@ -326,48 +332,113 @@ def get_bache(request, id_bache):
             "longitud": float(bache.longitud),
             "foto": bache.foto.url if bache.foto else None,
         }
-        return Response(data, status=status.HTTP_200_OK)
+        return JsonResponse(data)
     except Exception as e:
-        return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        logger.error(f"Error al obtener bache {id_bache}: {str(e)}")
+        return JsonResponse({"error": str(e)}, status=500)
+
+
 @csrf_exempt
 @require_http_methods(["POST"])
 def modificar_bache_post(request, id_bache):
+    """
+    POST para actualizar un bache con datos + foto.
+    """
     try:
-        data = json.loads(request.body.decode('utf-8'))
-
         bache = get_object_or_404(Bache, id_bache=id_bache)
 
-        bache.estado = data.get('estado', bache.estado)
-        bache.peligrosidad = data.get('peligrosidad', bache.peligrosidad)
-        bache.tipo_calle_id = data.get('tipo_calle', bache.tipo_calle_id)
-        bache.direccion = data.get('direccion', bache.direccion)
-        bache.accidentes = data.get('accidentes', bache.accidentes)
-        bache.diametro = data.get('diametro', bache.diametro)
+        estado = request.POST.get('estado')
+        peligrosidad = request.POST.get('peligrosidad')
+        tipo_calle = request.POST.get('tipo_calle')
+        direccion = request.POST.get('direccion')
+        accidentes = request.POST.get('accidentes')
+        diametro = request.POST.get('diametro')
+
+        bache.estado = estado or bache.estado
+        bache.peligrosidad = peligrosidad or bache.peligrosidad
+        bache.tipo_calle = tipo_calle or bache.tipo_calle
+        bache.direccion = direccion or bache.direccion
+        bache.accidentes = accidentes or bache.accidentes
+        bache.diametro = diametro or bache.diametro
+
+        if 'foto' in request.FILES:
+            bache.foto = request.FILES['foto']
 
         bache.save()
-        return JsonResponse({'success': True, 'message': 'Bache actualizado correctamente.'})
-
+        return JsonResponse({'success': True, 'message': 'Bache actualizado correctamente'})
     except Exception as e:
+        logger.error(f"Error al actualizar bache: {str(e)}", exc_info=True)
         return JsonResponse({'success': False, 'error': str(e)}, status=400)
-@csrf_exempt
-@require_http_methods(["GET", "POST"])
-def modificar_bache(request):
-    context = {
-        'localidades': Localidad.objects.all(),
-        'upzs': UPZ.objects.all(),
-        'barrios': Barrio.objects.all(),
-        'baches': Bache.objects.all(),
-        'tipos_calle': Tipo_calle.objects.all()
-    }
 
+def buscar_bache_eliminar(request):
+    id_bache = request.GET.get('id_bache')
+    try:
+        bache = Bache.objects.get(id_bache=id_bache)
+        data = {
+            'localidad': bache.localidad,
+            'upz': bache.upz.nombre,
+            'barrio': bache.barrio.nombre,
+            'estado': bache.estado,
+            'peligrosidad': bache.peligrosidad,
+            'tipo_calle': bache.tipo_calle,
+            'direccion': bache.direccion,
+            'accidentes': bache.accidentes,
+            'diametro': bache.diametro,
+            'latitud': bache.latitud,
+            'longitud': bache.longitud,
+            'foto': bache.foto.url if bache.foto else ''
+        }
+        return JsonResponse({'success': True, 'bache': data})
+    except Bache.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'El bache no existe'})
+    
+@csrf_exempt
+def mostrar_eliminar_bache(request):
     if request.method == 'POST':
         id_bache = request.POST.get('id_bache')
-
         try:
             bache = Bache.objects.get(id_bache=id_bache)
-            context['bache'] = bache
-            context['id_bache'] = id_bache
+            bache.delete()
+            return JsonResponse({'success': True, 'message': 'Bache eliminado correctamente'})
         except Bache.DoesNotExist:
-            context['error'] = f"No se encontró el bache con ID {id_bache}"
+            return JsonResponse({'success': False, 'message': 'El bache no existe'})
+    return render(request, 'bache/eliminar_bache.html')
 
-    return render(request, 'bache/modificar_bache.html', context)
+
+@require_POST
+@csrf_exempt  # si no estás usando el decorador CSRF token en la plantilla
+def eliminar_bache_confirmar(request, id):
+    if request.method == "POST":
+        try:
+            bache = Bache.objects.get(pk=id)
+            bache.delete()
+            return JsonResponse({"success": True})
+        except Bache.DoesNotExist:
+            return JsonResponse({"success": False, "error": "Bache no encontrado"})
+    return JsonResponse({"success": False, "error": "Método no permitido"})
+
+def mostrar_registrar_accidente(request):
+    return render(request, 'bache/registrar_accidente.html')
+
+
+def admin_eliminar_bache_directo(request, id_bache):
+    if request.method == 'POST':
+        try:
+            bache = Bache.objects.get(id_bache=id_bache)
+            bache.delete(hard_delete=True)  # esto borra realmente
+            return JsonResponse({'success': True})
+        except Bache.DoesNotExist:
+            return JsonResponse({'success': False, 'error': 'Bache no encontrado'})
+    else:
+        raise Http404("Método no permitido")
+    
+def api_registrar_accidente(request, id_bache):
+    if request.method == 'POST':
+        try:
+            bache = get_object_or_404(Bache, id_bache=id_bache)
+            bache.accidentes += 1
+            bache.save()
+            return JsonResponse({'status': 'success', 'message': 'Accidente registrado correctamente.'})
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': str(e)})
+    return JsonResponse({'status': 'error', 'message': 'Método no permitido'})

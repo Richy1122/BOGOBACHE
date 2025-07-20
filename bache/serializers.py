@@ -45,6 +45,11 @@ class BacheSerializer(serializers.ModelSerializer):
         error_messages={'required': 'El barrio es obligatorio'}
     )
 
+
+
+
+
+
     estado = serializers.ChoiceField(
         choices=Estado.choices,
         required=True,
@@ -69,8 +74,21 @@ class BacheSerializer(serializers.ModelSerializer):
         }
     )
     
-     # Campos de fecha/hora personalizados
+     # Campos de solo lectura para mostrar nombres
+    nombre_localidad = serializers.SerializerMethodField()
+    nombre_upz = serializers.SerializerMethodField()
+    nombre_barrio = serializers.SerializerMethodField()
+
+    def get_nombre_localidad(self, obj):
+        return obj.localidad.nombre if obj.localidad else None
+
+    def get_nombre_upz(self, obj):
+        return obj.upz.nombre if obj.upz else None
+
+    def get_nombre_barrio(self, obj):
+        return obj.barrio.nombre if obj.barrio else None
      
+     # Campos de fecha/hora personalizados  
     created_at = serializers.DateTimeField(format="%Y-%m-%d %H:%M", read_only=True)
     updated_at = serializers.DateTimeField(format="%Y-%m-%d %H:%M", read_only=True, allow_null=True)
     deleted_at = serializers.DateTimeField(format="%Y-%m-%d %H:%M", read_only=True, allow_null=True)

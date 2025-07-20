@@ -135,5 +135,7 @@ class Bache(models.Model):
         super().save(*args, **kwargs)
 
     def delete(self, *args, **kwargs):
+        if kwargs.pop('hard_delete', False):
+            return super().delete(*args, **kwargs)
         self.deleted_at = timezone.now()
         self.save()

@@ -63,8 +63,9 @@
   <div id="menuLateral" class="menu-lateral">
     <a href="{% url 'ver_filtrado_baches' %}"><button>CONSULTAR BACHE</button></a>
     <a href="{% url 'crear_bache' %}" onclick="ocultarMenuLateral()"><button>CREAR BACHE</button></a>
-    <a href="{% url 'modificar_bache' %}" onclick="ocultarMenuLateral()"><button>MODIFICAR BACHE</button></a>
-    <button onclick="alert('Funcionalidad ELIMINAR no implementada')">ELIMINAR BACHE</button>
+    <a href="{% url 'mostrar_modificar_bache' %}" onclick="ocultarMenuLateral()"><button>MODIFICAR BACHE</button></a>
+    <a href="{% url 'mostrar_eliminar_bache' %}" onclick="ocultarMenuLateral()"><button>ELIMINAR BACHE</button></a>
+    <a href="{% url 'mostrar_registrar_accidente' %}" onclick="ocultarMenuLateral()"><button>REPORTAR ACCIDENTE POR BACHE</button></a>
   </div>
 
   <div class="contenido">

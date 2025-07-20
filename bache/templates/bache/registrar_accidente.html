@@ -1,0 +1,259 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block contenido %}
+<div class="main-container">
+  <!-- Panel lateral izquierdo -->
+  <div class="filter-panel">
+    <h3>REGISTRAR ACCIDENTE</h3>
+
+    <div id="busqueda-por-id" style="margin-bottom: 20px;">
+      <p style="color: #000000; font-weight: bold; margin-bottom: 8px;">Selecciona un bache o búscalo por ID:</p>
+
+      <input
+        type="text"
+        id="input-id-buscar"
+        placeholder="ID del Bache"
+      >
+
+      <button id="btn-buscar-id">Buscar</button>
+    </div>
+
+    <div id="info-bache" class="hidden">
+      <p><strong>ID:</strong> <span id="bache-id"></span></p>
+      <p><strong>Dirección:</strong> <span id="bache-direccion"></span></p>
+      <p><strong>Localidad:</strong> <span id="nombre-localidad"></span></p>
+      <p><strong>UPZ:</strong> <span id="nombre-upz"></span></p>
+      <p><strong>Barrio:</strong> <span id="nombre-barrio"></span></p>
+      <p><strong>Estado:</strong> <span id="bache-estado"></span></p>
+      <p><strong>Peligrosidad:</strong> <span id="bache-peligrosidad"></span></p>
+      <p><strong>Tipo de calle:</strong> <span id="bache-tipo_calle"></span></p>
+      <p><strong>Accidentes reportados:</strong> <span id="bache-accidentes"></span></p>
+      <p><strong>Diámetro aproximado (cm):</strong> <span id="bache-diametro"></span></p>
+      <p><strong>Foto:</strong><br><img id="bache-foto" src="" alt="Foto del bache" style="max-width: 100%; margin-top: 5px;"></p>
+
+      <button id="btn-registrar-accidente">Registrar Accidente</button>
+    </div>
+  </div>
+
+  <!-- Mapa -->
+  <div class="map-section">
+    <div id="map"></div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+function getCookie(name) {
+  let cookieValue = null;
+  if (document.cookie && document.cookie !== '') {
+    const cookies = document.cookie.split(';');
+    for (let c of cookies) {
+      c = c.trim();
+      if (c.startsWith(name + '=')) {
+        cookieValue = decodeURIComponent(c.substring(name.length + 1));
+        break;
+      }
+    }
+  }
+  return cookieValue;
+}
+
+const map = L.map("map").setView([4.60971, -74.08175], 12);
+L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+  attribution: "&copy; OpenStreetMap contributors"
+}).addTo(map);
+
+const iconoRojo = L.icon({
+  iconUrl: "{% static 'bache/images/punto_rojo.png' %}",
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+});
+
+const markersLayer = L.layerGroup().addTo(map);
+
+function cargarBaches() {
+  fetch("/api/baches/")
+    .then(res => res.json())
+    .then(baches => {
+      markersLayer.clearLayers();
+      baches.forEach(b => {
+        const marker = L.marker([b.latitud, b.longitud], { icon: iconoRojo }).addTo(markersLayer);
+        marker.on("click", () => seleccionarBache(b.id_bache));
+      });
+    });
+}
+cargarBaches();
+
+function seleccionarBache(id) {
+  fetch(`/api/baches/${id}/`)
+    .then(res => res.json())
+    .then(bache => mostrarDetalle(bache));
+}
+
+function mostrarDetalle(bache) {
+  document.getElementById("busqueda-por-id").style.display = "none";
+  document.getElementById("info-bache").classList.remove("hidden");
+
+  document.getElementById("bache-id").textContent = bache.id_bache;
+  document.getElementById("bache-direccion").textContent = bache.direccion;
+  document.getElementById("nombre-localidad").textContent = bache.nombre_localidad || "Sin localidad";
+  document.getElementById("nombre-upz").textContent = bache.nombre_upz || "Sin UPZ";
+  document.getElementById("nombre-barrio").textContent = bache.nombre_barrio || "Sin barrio";
+  document.getElementById("bache-estado").textContent = bache.estado;
+  document.getElementById("bache-peligrosidad").textContent = bache.peligrosidad;
+  document.getElementById("bache-tipo_calle").textContent = bache.tipo_calle;
+  document.getElementById("bache-accidentes").textContent = bache.accidentes;
+  document.getElementById("bache-diametro").textContent = bache.diametro;
+
+  const foto = document.getElementById("bache-foto");
+  if (bache.foto) {
+    foto.src = bache.foto;
+    foto.style.display = "block";
+  } else {
+    foto.style.display = "none";
+  }
+
+  map.setView([bache.latitud, bache.longitud], 17);
+}
+
+document.getElementById("btn-buscar-id").addEventListener("click", () => {
+  const id = document.getElementById("input-id-buscar").value.trim();
+  if (!id) {
+    Swal.fire({
+      icon: 'warning',
+      title: 'ID vacío',
+      text: 'Por favor ingresa un ID válido.',
+      confirmButtonColor: '#d20000'
+    });
+    return;
+  }
+  fetch(`/api/baches/${id}/`)
+    .then(response => {
+      if (!response.ok) throw new Error("No encontrado");
+      return response.json();
+    })
+    .then(bache => mostrarDetalle(bache))
+    .catch(() => {
+      Swal.fire({
+        icon: "error",
+        title: "No se encontró bache",
+        text: "Selecciona el bache en el mapa o corrige el ID",
+        confirmButtonColor: "#d20000"
+      });
+    });
+});
+
+document.getElementById("btn-registrar-accidente").addEventListener("click", () => {
+  const id = document.getElementById("bache-id").textContent;
+
+  Swal.fire({
+    title: '¿Registrar accidente?',
+    text: `Se sumará +1 al total de accidentes del bache ${id}.`,
+    icon: 'question',
+    showCancelButton: true,
+    confirmButtonColor: '#d33',
+    cancelButtonColor: '#d20000',
+    confirmButtonText: 'Sí, registrar',
+    cancelButtonText: 'Cancelar'
+  }).then(result => {
+    if (result.isConfirmed) {
+      fetch(`/api/registrar_accidente/${id}/`, {
+        method: 'POST',
+        headers: {
+          'X-CSRFToken': getCookie('csrftoken')
+        }
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.status === 'success') {
+          Swal.fire({
+            title: 'Registrado',
+            text: data.message,
+            icon: 'success',
+            confirmButtonColor: '#d33'
+          });
+          seleccionarBache(id); // recargar datos actualizados
+        } else {
+          Swal.fire('Error', data.message, 'error');
+        }
+      });
+    }
+  });
+});
+</script>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+  select, input[type="text"] {
+    background: #e2e0ec;
+    border: 1px solid #ccc;
+    padding: 6px 10px;
+    border-radius: 4px;
+    font-size: 14px;
+    width: 100%;
+    margin-top: 5px;
+  }
+  .main-container {
+    display: flex;
+    min-height: calc(100vh - 60px);
+  }
+  .filter-panel {
+    width: 350px;
+    background: #fff;
+    padding: 20px;
+    overflow-y: auto;
+    border-right: 2px solid #eee;
+  }
+  .map-section {
+    flex: 1;
+    position: relative;
+  }
+  #map {
+    width: 100%;
+    height: 100vh;
+  }
+  .filter-panel h3 {
+    color: #d20000;
+  }
+  .filter-panel label {
+    color: #000;
+    font-weight: 600;
+    display: block;
+    margin-top: 12px;
+    margin-bottom: 4px;
+  }
+  .filter-panel button {
+    margin-top: 20px;
+    background: #d20000;
+    color: white;
+    padding: 10px;
+    width: 100%;
+    border-radius: 25px;
+    border: none;
+    font-weight: bold;
+    cursor: pointer;
+  }
+  .filter-panel button:hover {
+    background: #a80000;
+  }
+  .hidden {
+    display: none;
+  }
+
+    #bache-foto {
+    max-width: 100%;
+    max-height: 250px;
+    height: auto;
+    object-fit: contain;
+    border-radius: 8px;
+    display: block;
+    margin-top: 8px;
+    margin-bottom: 10px;
+  }
+
+</style>
+{% endblock %}

@@ -23,8 +23,16 @@ urlpatterns = [
     path('ajax/filtrar_baches/', views.filtrar_baches, name='filtrar_baches_ajax'),
     path('ajax/obtener_filtros/', views.obtener_filtros, name='obtener_filtros'),
 
-    path('modificar_bache/', views.modificar_bache, name='modificar_bache'),
-    path('ajax/modificar_bache/<str:id_bache>/', views.modificar_bache_post, name='modificar_bache_post'),  # POST AJAX
-    path('ajax/get_bache/<str:id_bache>/', views.get_bache, name='get_bache'),
- 
+    path('modificar_bache/', views.mostrar_modificar_bache, name='mostrar_modificar_bache'),
+    path('modificar_bache/<str:id_bache>/', views.get_bache, name='get_bache'),
+    path('modificar_bache/<str:id_bache>/guardar/', views.modificar_bache_post, name='modificar_bache_post'),
+
+    path('registrar-accidente/', views.mostrar_registrar_accidente, name='mostrar_registrar_accidente'),
+    path('api/registrar_accidente/<str:id_bache>/', views.api_registrar_accidente, name='api_registrar_accidente'),
+
+    path('eliminar_bache/', views.mostrar_eliminar_bache, name='mostrar_eliminar_bache'),
+    path('ajax/buscar_bache_eliminar/', views.buscar_bache_eliminar, name='buscar_bache_eliminar'),
+    path('eliminar_bache_confirmar/<str:id>/', views.eliminar_bache_confirmar, name='eliminar_bache_confirmar'),
+    path('admin_eliminar_bache_directo/<str:id_bache>/', views.admin_eliminar_bache_directo, name='admin_eliminar_bache_directo'),
+
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
